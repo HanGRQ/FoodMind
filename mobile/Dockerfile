@@ -1,43 +1,59 @@
-FROM ubuntu:16.04
+# 使用 Ubuntu 20.04 作为基础镜像
+FROM ubuntu:20.04
 
-# This allows us to fetch and unpack things later.
+# 设置非交互模式
+ARG DEBIAN_FRONTEND=noninteractive
+
+# 更新软件源并安装依赖
 RUN apt-get update \
     && apt-get install -y \
+    software-properties-common \
     wget \
     xz-utils \
-    zip
+    zip \
+    openjdk-8-jdk \
+    curl
 
-# Install Node.js + npm.
-RUN wget https://nodejs.org/dist/v6.11.3/node-v6.11.3-linux-x64.tar.xz -O /tmp/node.tar.xz \
-    && cd /usr/local/ \
-    && tar --strip-components 1 -xf /tmp/node.tar.xz \
-    && rm /tmp/node.tar.xz
+# 清理缓存
+RUN rm -rf /var/lib/apt/lists/*
 
-# Install JDK.
-RUN apt-get install -y openjdk-8-jdk gradle
-ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64/
+# 设置 JAVA_HOME 环境变量
+ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/
+ENV PATH=${JAVA_HOME}/bin:${PATH}
 
-# Install Android tools. This is the only part of Android Studio that we need.
+# 安装 Node.js 和 npm
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs
+
+# 安装 Android SDK 工具
 RUN wget https://dl.google.com/android/repository/sdk-tools-linux-3859397.zip -O /tmp/android-sdk.zip \
-    && mkdir -p /opt/android \
-    && cd /opt/android \
+    && mkdir -p /opt/android-sdk \
+    && cd /opt/android-sdk \
     && unzip /tmp/android-sdk.zip \
     && rm /tmp/android-sdk.zip
-ENV PATH ${PATH}:/opt/android/tools/bin
 
-# This should always be the latest version that the project can be built with.
-RUN yes | sdkmanager "build-tools;27.0.3"
+# 设置 Android SDK 的环境变量
+ENV ANDROID_HOME=/opt/android-sdk
+ENV PATH=$ANDROID_HOME/tools/bin:$ANDROID_HOME/platform-tools:$PATH
 
-# Change this version to match your desired Android API version, as supported
-# by your target hardware device.
-RUN yes | sdkmanager "platforms;android-26"
+# 安装 Android 构建工具和平台
+RUN yes | sdkmanager --licenses \
+    && yes | sdkmanager "build-tools;35.0.0" \
+    && yes | sdkmanager "platforms;android-27"
 
-# Install Cordova, and opt out of telemetry reporting. If we don't opt-out now,
-# then the user will face an interactive prompt when building the image later.
-RUN npm install -g cordova \
+# 安装 Cordova，并关闭 telemetry
+RUN npm install -g cordova --unsafe-perm \
     && cordova telemetry off
 
+# 下载并安装 Gradle
+RUN wget https://services.gradle.org/distributions/gradle-8.10.2-bin.zip -P /tmp \
+    && unzip /tmp/gradle-8.10.2-bin.zip -d /opt/gradle \
+    && rm /tmp/gradle-8.10.2-bin.zip
+
+# 设置 Gradle 的环境变量
+ENV GRADLE_HOME=/opt/gradle
+ENV PATH=$GRADLE_HOME/bin:$PATH
+
+
+# 设置工作目录
 WORKDIR /mobile
-# This can be overridden by the user, but assumes that the repo's mobile/
-# directory is volume-mounted to /mobile in the container, using `docker run -v
-# mobile:/mobile`, for example.

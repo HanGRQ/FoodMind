@@ -18,8 +18,20 @@
   "cordova": {
     "plugins": {
       "cordova-plugin-whitelist": {},
-      "cordova-plugin-cache-clear": {}
+      "cordova-plugin-cache-clear": {},
+      "cordova-plugin-camera": {
+        "ANDROID_SUPPORT_V4_VERSION": "27.+"
+      },
+      "cordova-plugin-file-transfer": {}
     },
-    "platforms": []
+    "platforms": [
+      "android"
+    ]
+  },
+  "devDependencies": {
+    "cordova-android": "^7.1.4",
+    "cordova-plugin-camera": "^4.1.0",
+    "cordova-plugin-file": "^8.1.0",
+    "cordova-plugin-file-transfer": "^1.7.0"
   }
 }
